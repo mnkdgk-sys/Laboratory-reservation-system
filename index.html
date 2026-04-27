@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>実験室予約システム</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ログイン画面 -->
+  <div id="screen-login" class="auth-screen hidden">
+    <div class="auth-card">
+      <div class="auth-logo">🔬</div>
+      <h1 class="auth-title">実験室予約システム</h1>
+      <p class="auth-subtitle">メールアドレスとパスワードでログイン</p>
+      <div class="form-group">
+        <label for="login-email">メールアドレス</label>
+        <input id="login-email" type="email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label for="login-password">パスワード</label>
+        <input id="login-password" type="password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <p id="login-error" class="error-msg hidden"></p>
+      <button id="btn-login" class="btn-primary btn-full">ログイン</button>
+      <p class="auth-note">アカウントは管理者が発行します</p>
+    </div>
+  </div>
+
+  <!-- パスワード設定画面（招待メールから来た場合） -->
+  <div id="screen-set-password" class="auth-screen hidden">
+    <div class="auth-card">
+      <div class="auth-logo">🔑</div>
+      <h1 class="auth-title">パスワードを設定</h1>
+      <p class="auth-subtitle">アカウントのパスワードを設定してください</p>
+      <div class="form-group">
+        <label for="new-password">新しいパスワード</label>
+        <input id="new-password" type="password" placeholder="8文字以上" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label for="new-password-confirm">パスワード（確認）</label>
+        <input id="new-password-confirm" type="password" placeholder="もう一度入力" autocomplete="new-password">
+      </div>
+      <p id="setpw-error" class="error-msg hidden"></p>
+      <button id="btn-set-password" class="btn-primary btn-full">設定してログイン</button>
+    </div>
+  </div>
+
+  <!-- メインアプリ -->
+  <div id="screen-app" class="hidden">
+
+    <header>
+      <span id="lab-name">実験室予約システム</span>
+      <div class="header-actions">
+        <button id="btn-today" class="btn-ghost">今日</button>
+        <button id="btn-settings" class="btn-ghost">⚙ 設定</button>
+        <div class="header-user">
+          <button id="btn-account" class="btn-ghost btn-user-name">
+            <span id="header-user-name"></span>
+          </button>
+          <button id="btn-logout" class="btn-ghost">ログアウト</button>
+        </div>
+      </div>
+    </header>
+
+    <nav class="date-nav">
+      <button id="btn-prev" class="btn-nav">‹</button>
+      <span id="current-date"></span>
+      <button id="btn-next" class="btn-nav">›</button>
+      <div class="view-toggle">
+        <button class="view-btn active" data-view="day">日</button>
+        <button class="view-btn" data-view="week">週</button>
+        <button class="view-btn" data-view="month">月</button>
+      </div>
+    </nav>
+
+    <div id="calendar-container"></div>
+
+    <!-- Modal Overlay -->
+    <div id="modal-overlay" class="hidden">
+
+      <!-- 予約モーダル -->
+      <div id="modal-reserve" class="modal hidden">
+        <h2>予約する</h2>
+        <div class="form-row">
+          <span class="form-label">部屋</span>
+          <strong id="modal-res-room"></strong>
+        </div>
+        <div class="form-group">
+          <label for="modal-res-start-select">開始時刻</label>
+          <select id="modal-res-start-select"></select>
+        </div>
+        <div class="form-group">
+          <label for="modal-res-end">終了時刻</label>
+          <select id="modal-res-end"></select>
+        </div>
+        <div class="form-group">
+          <label for="modal-res-name">名前</label>
+          <input id="modal-res-name" type="text" placeholder="山田 太郎" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label for="modal-res-purpose">用途</label>
+          <input id="modal-res-purpose" type="text" placeholder="実験、打ち合わせ など" autocomplete="off">
+        </div>
+        <p id="modal-res-error" class="error-msg hidden"></p>
+        <div class="modal-footer">
+          <button id="btn-reserve-cancel" class="btn-secondary">キャンセル</button>
+          <button id="btn-reserve-submit" class="btn-primary">予約する</button>
+        </div>
+      </div>
+
+      <!-- 詳細モーダル -->
+      <div id="modal-detail" class="modal hidden">
+        <h2>予約詳細</h2>
+        <table class="detail-table">
+          <tr><th>部屋</th><td id="detail-room"></td></tr>
+          <tr><th>日時</th><td id="detail-time"></td></tr>
+          <tr><th>名前</th><td id="detail-name"></td></tr>
+          <tr><th>用途</th><td id="detail-purpose"></td></tr>
+        </table>
+        <div class="modal-footer">
+          <button id="btn-detail-delete" class="btn-danger">この予約を削除</button>
+          <button id="btn-detail-close" class="btn-secondary">閉じる</button>
+        </div>
+      </div>
+
+      <!-- 設定モーダル -->
+      <div id="modal-settings" class="modal modal-wide hidden">
+        <h2>設定</h2>
+
+        <div class="settings-tabs">
+          <button class="tab-btn active" data-tab="tab-general">一般</button>
+          <button class="tab-btn" data-tab="tab-rooms">部屋</button>
+          <button class="tab-btn tab-admin-only hidden" data-tab="tab-members">メンバー管理</button>
+        </div>
+
+        <!-- 一般 -->
+        <div id="tab-general" class="tab-content">
+          <div class="form-group">
+            <label for="setting-lab-name">システム名</label>
+            <input id="setting-lab-name" type="text">
+          </div>
+          <div class="form-group">
+            <label>表示時間帯</label>
+            <div class="time-range-row">
+              <select id="setting-start-hour"></select>
+              <span class="range-sep">〜</span>
+              <select id="setting-end-hour"></select>
+            </div>
+          </div>
+        </div>
+
+        <!-- 部屋 -->
+        <div id="tab-rooms" class="tab-content hidden">
+          <div id="rooms-setting-list"></div>
+          <button id="btn-add-room" class="btn-add">＋ 部屋を追加</button>
+        </div>
+
+        <!-- メンバー管理（管理者のみ） -->
+        <div id="tab-members" class="tab-content hidden">
+          <div class="invite-section">
+            <p class="section-label">メンバーを招待</p>
+            <div class="invite-row">
+              <input id="invite-email" type="email" placeholder="招待するメールアドレス" class="invite-input">
+              <button id="btn-invite" class="btn-primary">招待メール送信</button>
+            </div>
+            <p id="invite-msg" class="invite-feedback hidden"></p>
+          </div>
+          <div class="members-section">
+            <p class="section-label">メンバー一覧</p>
+            <div id="members-list"><span class="loading-text">読み込み中…</span></div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button id="btn-settings-close" class="btn-secondary">キャンセル</button>
+          <button id="btn-settings-save" class="btn-primary">保存</button>
+        </div>
+      </div>
+
+      <!-- アカウント設定モーダル -->
+      <div id="modal-account" class="modal hidden">
+        <h2>アカウント設定</h2>
+
+        <div class="form-group">
+          <label>メールアドレス</label>
+          <span id="account-email" class="account-info-text"></span>
+        </div>
+        <div class="form-group">
+          <label for="account-display-name">表示名</label>
+          <input id="account-display-name" type="text" placeholder="山田 太郎">
+        </div>
+
+        <hr class="modal-divider">
+        <p class="modal-section-title">パスワード変更</p>
+
+        <div class="form-group">
+          <label for="account-new-pw">新しいパスワード</label>
+          <input id="account-new-pw" type="password" placeholder="変更する場合のみ入力（8文字以上）" autocomplete="new-password">
+        </div>
+        <div class="form-group">
+          <label for="account-new-pw-confirm">パスワード（確認）</label>
+          <input id="account-new-pw-confirm" type="password" placeholder="もう一度入力" autocomplete="new-password">
+        </div>
+
+        <p id="account-error" class="error-msg hidden"></p>
+        <p id="account-success" class="success-msg hidden"></p>
+
+        <div class="modal-footer">
+          <button id="btn-account-close" class="btn-secondary">閉じる</button>
+          <button id="btn-account-save" class="btn-primary">保存</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
